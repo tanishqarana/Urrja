@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UURJA - P2P Energy Trading</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f9f4;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      text-align: center;
+    }
+
+    header {
+      background-color: #4CAF50;
+      color: white;
+      padding: 20px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+    }
+
+    h1 {
+      font-size: 36px;
+      margin: 0;
+      padding-bottom: 10px;
+    }
+
+    h2 {
+      font-size: 28px;
+      margin-bottom: 20px;
+    }
+
+    h3 {
+      font-size: 20px;
+      margin-bottom: 10px;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+      text-align: left;
+      padding-top: 10px;
+    }
+
+    .form-group label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      margin-top: 5px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      box-sizing: border-box;
+    }
+
+    .button {
+      padding: 12px 24px;
+      background-color: #4CAF50;
+      color: white;
+      font-size: 16px;
+      border: none;
+      border-radius: 25px;
+      cursor: pointer;
+      transition: background-color 0.3s ease, transform 0.2s ease;
+      margin: 10px;
+      width: 200px;
+    }
+
+    .button:hover {
+      background-color: #45a049;
+      transform: scale(1.05);
+    }
+
+    .button:active {
+      transform: scale(0.98);
+    }
+
+    .error-message {
+      color: red;
+      font-weight: bold;
+      margin-top: 10px;
+    }
+
+    .back-button {
+      padding: 8px 16px;
+      background-color: #f44336;
+      color: white;
+      font-size: 16px;
+      border: none;
+      border-radius: 25px;
+      cursor: pointer;
+      transition: background-color 0.3s ease, transform 0.2s ease;
+      margin-top: 20px;
+    }
+
+    .back-button:hover {
+      background-color: #e53935;
+      transform: scale(1.05);
+    }
+
+    .back-button:active {
+      transform: scale(0.98);
+    }
+
+    /* Page layout styles */
+    .login,
+    .signup,
+    .home,
+    .sell,
+    .buy,
+    .account,
+    .payment,
+    .transfer {
+      display: none;
+    }
+
+    /* Centering the login form under the h1 */
+    #login,
+    #signup {
+      text-align: center;
+      margin-top: 100px;
+    }
+
+    #login .form-group,
+    #signup .form-group {
+      width: 100%;
+      max-width: 400px;
+      margin: 0 auto;
+    }
+
+    /* Home Page button layout */
+    #home {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 80vh;
+    }
+
+    .home .button {
+      width: 60%;
+      margin-bottom: 15px;
+    }
+
+    /* Sell, Buy, and Account Pages */
+    #sell,
+    #buy,
+    #account {
+      text-align: center;
+      margin-top: 20px;
+    }
+
+    .listing,
+    .history {
+      border: 1px solid #ddd;
+      padding: 10px;
+      margin: 10px 0;
+      background-color: #e8f5e9;
+      text-align: left;
+      border-radius: 10px;
+    }
+
+    .listing svg {
+      width: 30px;
+      height: 30px;
+      margin-right: 10px;
+    }
+
+    .history ul {
+      list-style-type: none;
+      padding: 0;
+    }
+
+    .history ul li {
+      margin: 5px 0;
+    }
+
+    .graph {
+      margin-top: 20px;
+      width: 100%;
+      height: 200px;
+      background-color: #ddd;
+      position: relative;
+    }
+
+    .fluctuating-bar {
+      height: 100%;
+      width: 0%;
+      background-color: #4CAF50;
+    }
+
+    /* Adjusting the layout for the account page */
+    #account {
+      width: 60%;
+      margin: 0 auto;
+    }
+
+    #accountUsername,
+    #accountEmail {
+      font-weight: bold;
+    }
+
+    #history {
+      margin-top: 20px;
+      padding: 10px;
+      background-color: #f1f1f1;
+      border-radius: 10px;
+    }
+
+    #historyList {
+      list-style-type: none;
+      padding: 0;
+    }
+
+    #historyList li {
+      padding: 5px 0;
+    }
+
+    /* Responsive Design for smaller screens */
+    @media (max-width: 768px) {
+      .button {
+        width: 80%;
+      }
+
+      .home .button {
+        width: 80%;
+        margin-bottom: 10px;
+      }
+
+      #account {
+        width: 90%;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <h1>UURJA - P2P Energy Trading</h1>
+  </header>
+
+  <div class="container">
+
+    <!-- Sign-Up Page -->
+    <div id="signup" class="signup">
+      <h2>Sign Up</h2>
+      <div class="form-group">
+        <label for="newUsername">Username:</label>
+        <input type="text" id="newUsername" placeholder="Enter username" required>
+      </div>
+      <div class="form-group">
+        <label for="newEmail">Email ID:</label>
+        <input type="email" id="newEmail" placeholder="Enter email" required>
+      </div>
+      <div class="form-group">
+        <label for="newPassword">Password:</label>
+        <input type="password" id="newPassword" placeholder="Enter password" required>
+      </div>
+      <div class="form-group">
+        <label for="newIpAddress">IP Address:</label>
+        <input type="text" id="newIpAddress" placeholder="Enter IP address" required>
+      </div>
+      <button class="button" onclick="signUp()">Sign Up</button>
+      <p>Already have an account? <a href="javascript:void(0)" onclick="showLoginPage()">Login</a></p>
+    </div>
+
+    <!-- Login Page -->
+    <div id="login" class="login" class="active">
+      <h2>Login</h2>
+      <div class="form-group">
+        <label for="username">Username:</label>
+        <input type="text" id="username" placeholder="Enter username" required>
+      </div>
+      <div class="form-group">
+        <label for="email">Email ID:</label>
+        <input type="email" id="email" placeholder="Enter email" required>
+      </div>
+      <div class="form-group">
+        <label for="password">Password:</label>
+        <input type="password" id="password" placeholder="Enter password" required>
+      </div>
+      <div class="form-group">
+        <label for="loginIpAddress">IP Address:</label>
+        <input type="text" id="loginIpAddress" placeholder="Enter IP address" required>
+      </div>
+      <button class="button" onclick="login()">Login</button>
+      <p>Don't have an account? <a href="javascript:void(0)" onclick="showSignUpPage()">Sign Up</a></p>
+    </div>
+
+    <!-- Home Page (after login) -->
+    <div id="home" class="home">
+      <h2>Welcome, <span id="user-name"></span></h2>
+      <button class="button" onclick="showSellPage()">Sell Energy</button>
+      <button class="button" onclick="showBuyPage()">Buy Energy</button>
+      <button class="button" onclick="showAccountPage()">My Account</button>
+      <button class="button" onclick="logout()">Logout</button>
+    </div>
+
+    <!-- Sell Page -->
+    <div id="sell" class="sell">
+      <h2>Sell Energy</h2>
+      <div class="form-group">
+        <label for="energyAmount">Amount of Energy (kW):</label>
+        <input type="number" id="energyAmount" placeholder="Enter energy amount" required>
+      </div>
+      <div class="form-group">
+        <label for="pricePerKWh">Price per kW (in ₹):</label>
+        <input type="number" id="pricePerKWh" placeholder="Enter price per kW" required>
+      </div>
+      <button class="button" onclick="listEnergy()">List Energy for Sale</button>
+      <button class="back-button" onclick="goHome()">Back to Home</button>
+    </div>
+
+    <!-- Buy Page -->
+    <div id="buy" class="buy">
+      <h2>Buy Energy</h2>
+      <div id="energyListings"></div>
+      <button class="back-button" onclick="goHome()">Back to Home</button>
+    </div>
+
+    <!-- Payment Gateway -->
+    <div id="payment" class="payment" style="display: none;">
+      <h2>Payment Gateway</h2>
+      <p>Seller's IP Address: <span id="sellerIpAddress">Loading IP...</span></p>
+      <p>Please confirm your payment to complete the transaction.</p>
+      <button class="button" onclick="processPayment(true)">Proceed to Pay</button>
+      <button class="button" onclick="processPayment(false)">Cancel</button>
+    </div>
+
+    <!-- Energy Transfer -->
+    <div id="transfer" class="transfer" style="display: none;">
+      <h2>Energy Transfer in Progress...</h2>
+      <div class="graph">
+        <div id="fluctuating-bar" class="fluctuating-bar"></div>
+      </div>
+      <button class="back-button" onclick="goHome()">Back to Home</button>
+    </div>
+
+    <!-- Account Page -->
+    <div id="account" class="account">
+      <h2>Your Account</h2>
+      <p><strong>Username:</strong> <span id="accountUsername"></span></p>
+      <p><strong>Email:</strong> <span id="accountEmail"></span></p>
+      <p><strong>IP Address:</strong> <span id="accountIpAddress"></span>
+        <button class="button" onclick="resetIpAddress()">Reset IP Address</button>
+      </p>
+      <h3>Transaction History</h3>
+      <div id="history" class="history">
+        <ul id="historyList"></ul>
+      </div>
+      <button class="back-button" onclick="goHome()">Back to Home</button>
+    </div>
+
+  </div>
+
+  <script>
+    let users = [];
+    let energyListings = [];
+    let currentUser = null;
+    let transferHistory = [];
+
+    // Initializing the app and fetching stored data
+    function init() {
+      users = JSON.parse(localStorage.getItem('users') || '[]');
+      energyListings = JSON.parse(localStorage.getItem('energyListings') || '[]');
+      currentUser = JSON.parse(localStorage.getItem('currentUser')) || null;
+
+      if (currentUser) {
+        showAccountPage();
+      } else {
+        showLoginPage();
+      }
+    }
+
+    function saveData() {
+      localStorage.setItem('users', JSON.stringify(users));
+      localStorage.setItem('energyListings', JSON.stringify(energyListings));
+    }
+
+    function saveCurrentUser() {
+      localStorage.setItem('currentUser', JSON.stringify(currentUser));
+    }
+    function clearFormInputs(sectionId) {
+      document.querySelector(`#${sectionId} input`).forEach(input => input.value = '');
+    }
+
+    // Show Login page
+    function showLoginPage() {
+      document.getElementById('signup').classList.remove('active');
+      document.getElementById('login').classList.add('active');
+      document.getElementById('home').style.display = 'none';
+      document.getElementById('login').style.display = 'block';
+
+    }
+
+
+    // Show SignUp page
+    function showSignUpPage() {
+      document.getElementById('signup').style.display = 'block';
+      document.getElementById('login').style.display = 'none';
+    }
+
+    // Sign Up function
+    function signUp() {
+      const newUsername = document.getElementById('newUsername').value;
+      const newEmail = document.getElementById('newEmail').value;
+      const newPassword = document.getElementById('newPassword').value;
+      const newIpAddress = document.getElementById('newIpAddress').value;
+
+      const existingUser = users.find(user => user.username === newUsername || user.email === newEmail);
+      if (existingUser) {
+        alert('Username or email already exists!');
+        return;
+      }
+
+      const newUser = {
+        username: newUsername,
+        email: newEmail,
+        password: newPassword,
+        ipAddress: newIpAddress,
+        transactions: []
+      };
+      users.push(newUser);
+      saveData();
+      alert('Account created successfully!');
+      showLoginPage();
+    }
+
+    // Login function
+    function login() {
+      const username = document.getElementById('username').value;
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const loginIpAddress = document.getElementById('loginIpAddress').value;
+
+      currentUser = users.find(user => user.username === username && user.email === email && user.password === password);
+      if (currentUser) {
+        if (currentUser.ipAddress && currentUser.ipAddress !== loginIpAddress) {
+          alert('IP address mismatch. Please use the registered IP or reset it.');
+          return;
+        }
+        currentUser.ipAddress = loginIpAddress;
+        saveCurrentUser();
+        saveData();
+        showHomePage(); // Go to home page after successful login
+      } else {
+        alert('Invalid credentials!');
+      }
+    }
+
+    // Show Home page after login/signup
+    function showHomePage() {
+      document.getElementById('signup').style.display = 'none';
+      document.getElementById('login').style.display = 'none';
+      document.getElementById('home').style.display = 'block';
+      document.getElementById('sell').style.display = 'none';
+      document.getElementById('buy').style.display = 'none';
+      document.getElementById('account').style.display = 'none';
+    }
+
+    function resetIpAddress() {
+      const newIp = prompt("Enter your new IP address:");
+      if (newIp) {
+        currentUser.ipAddress = newIp;
+        document.getElementById('accountIpAddress').textContent = newIp;
+        saveData();
+        alert("IP address reset successfully.");
+      }
+    }
+
+    // Logout function
+    function logout() {
+      currentUser = null;
+      showLoginPage();
+    }
+
+    // Show Sell Page
+    function showSellPage() {
+      document.getElementById('sell').style.display = 'block';
+      document.getElementById('home').style.display = 'none';
+    }
+
+    // List energy for sale
+    function listEnergy() {
+      const energyAmount = parseFloat(document.getElementById('energyAmount').value);
+      const pricePerKWh = parseFloat(document.getElementById('pricePerKWh').value);
+
+      if (energyAmount && pricePerKWh) {
+        const listing = {
+          energyAmount,
+          pricePerKWh,
+          seller: currentUser.username,
+        };
+        energyListings.push(listing);
+        saveData();
+        alert('Energy listed successfully!');
+        showHomePage();
+      } else {
+        alert('Please enter valid energy and price values.');
+      }
+    }
+
+    // Show Buy Page
+    function showBuyPage() {
+      document.getElementById('buy').style.display = 'block';
+      document.getElementById('home').style.display = 'none';
+      const energyListingsDiv = document.getElementById('energyListings');
+      energyListingsDiv.innerHTML = '';
+
+      energyListings.forEach((listing, index) => {
+        const listingDiv = document.createElement('div');
+        listingDiv.classList.add('listing');
+        listingDiv.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#FFA726" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="5"></circle>
+    <line x1="12" y1="1" x2="12" y2="3"></line>
+    <line x1="12" y1="21" x2="12" y2="23"></line>
+    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+    <line x1="1" y1="12" x2="3" y2="12"></line>
+    <line x1="21" y1="12" x2="23" y2="12"></line>
+    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+</svg>
+        <p>Seller: ${listing.seller}</p>
+        <p>Energy Available: ${listing.energyAmount} kW</p>
+        <p>Price per kW: ₹${listing.pricePerKWh}</p>
+        <label for="energyToBuy${index}">Energy to Buy (kW):</label>
+        <input type="number" id="energyToBuy${index}" placeholder="Enter amount" min="1" max="${listing.energyAmount}">
+        <button class="button" onclick="initiateBuy(${index})">Buy Energy</button>
+      `;
+        energyListingsDiv.appendChild(listingDiv);
+      });
+    }
+
+    // Initiate Buy Energy
+    function initiateBuy(index) {
+      const energyAmountToBuy = parseFloat(document.getElementById(`energyToBuy${index}`).value);
+      const listing = energyListings[index];
+
+      if (energyAmountToBuy > listing.energyAmount || energyAmountToBuy <= 0) {
+        alert('Invalid amount to buy.');
+        return;
+      }
+
+      // Proceed to payment gateway
+      document.getElementById('buy').style.display = 'none';
+      document.getElementById('payment').style.display = 'block';
+      // Pass energy amount to the simulateEnergyTransfer function
+      simulateEnergyTransfer(energyAmountToBuy);
+    }
+
+    // Process Payment (Simulation)
+    function processPayment(success) {
+      if (success) {
+        document.getElementById('payment').style.display = 'none';
+        document.getElementById('transfer').style.display = 'block';
+        simulateEnergyTransfer();
+      } else {
+        alert('Payment Failed!');
+        document.getElementById('payment').style.display = 'none';
+        document.getElementById('buy').style.display = 'block';
+      }
+    }
+
+    // Simulate Energy Transfer
+    function simulateEnergyTransfer(energyAmountToBuy) {
+      const transferBar = document.getElementById('fluctuating-bar');
+      let width = 0;
+
+      const steps = energyAmountToBuy * 2;
+
+      const interval = setInterval(() => {
+        if (width >= 100) {
+          clearInterval(interval);
+          completeTransaction(energyAmountToBuy);
+        } else {
+          width++;
+          transferBar.style.width = `${width}%`;
+        }
+      }, 100);
+    }
+
+    // Complete Transaction (Update history and remove from listings)
+    function completeTransaction() {
+      // Get the energy amount from the input field
+      const energyAmountToBuy = parseFloat(document.getElementById('energyToBuy').value);
+      
+      // Find the relevant listing based on the energy amount
+      const listingIndex = energyListings.findIndex(listing => listing.energyAmount >= energyAmountToBuy);
+      
+      // If the listing exists
+      if (listingIndex !== -1) {
+        const listing = energyListings[listingIndex];
+        listing.energyAmount -= energyAmountToBuy;  // Decrease energy from listing
+        
+        const totalPrice = listing.pricePerKWh * energyAmountToBuy; // Calculate total price
+    
+        // Update current user's transaction history
+        currentUser.transactions.push({
+          type: 'Buy',
+          energyAmount: energyAmountToBuy,
+          price: totalPrice,
+          seller: listing.seller
+        });
+    
+        // Add the transaction to the global transfer history (for display)
+        const transaction = {
+          amount: energyAmountToBuy,
+          price: totalPrice,
+          seller: listing.seller,
+          date: new Date().toLocaleString() // Store the date and time of transaction
+        };
+        
+        // Add to transfer history array
+        transferHistory.push(transaction);
+    
+        // Remove the listing if no energy is left
+        if (listing.energyAmount <= 0) {
+          energyListings.splice(listingIndex, 1);
+        }
+    
+        // Update the transfer history display
+        updateTransferHistory();
+    
+        // Optionally, save data to storage or server
+        saveData();
+    
+        // Notify user and show the home page
+        alert('Transaction Complete!');
+        showHomePage();
+      } else {
+        alert('Not enough energy available in this listing!');
+      }
+    }
+    
+
+    // Function to update the transfer history display
+  function updateTransferHistory() {
+    const historyList = document.getElementById('history-list'); // Make sure there's a container for the history list
+    historyList.innerHTML = ''; // Clear current history
+
+  // Loop through the history array and add each item to the list
+    transferHistory.forEach((transaction, index) => {
+      const listItem = document.createElement('li');
+      listItem.textContent = `Transaction ${index + 1}: ${transaction.amount} energy bought on ${transaction.date}`;
+     historyList.appendChild(listItem); // Add the item to the history list
+    });
+  }
+
+
+    // Show Account Page
+    function showAccountPage() {
+      document.getElementById('account').style.display = 'block';
+      document.getElementById('home').style.display = 'none';
+
+      // Show user info
+      document.getElementById('accountUsername').innerText = currentUser.username;
+      document.getElementById('accountEmail').innerText = currentUser.email;
+
+      // Show transaction history
+      const historyList = document.getElementById('historyList');
+      historyList.innerHTML = '';
+      if (currentUser.transactions.length > 0) {
+        currentUser.transactions.forEach(transaction => {
+          const transactionItem = document.createElement('li');
+          transactionItem.innerText = `${transaction.type} ${transaction.energyAmount} kW from ${transaction.seller} for $${transaction.price}`;
+          historyList.appendChild(transactionItem);
+        });
+      } else {
+        historyList.innerHTML = '<li>No transactions yet.</li>';
+      }
+    }
+    function showPaymentPage() {
+      document.getElementById('account').classList.remove('active');
+      document.getElementById('payment').classList.add('active');
+    }
+
+    // Go back to Home page
+    function goHome() {
+      document.getElementById('sell').style.display = 'none';
+      document.getElementById('buy').style.display = 'none';
+      document.getElementById('account').style.display = 'none';
+      document.getElementById('payment').style.display = 'none';
+      document.getElementById('transfer').style.display = 'none';
+      document.getElementById('home').style.display = 'block';
+    }
+    // Function to fetch and display the seller's IP address
+    function fetchSellerIpAddress() {
+      fetch('https://api.ipify.org?format=json')  // api.ipify.org returns the public IP in JSON format
+        .then(response => response.json())
+        .then(data => {
+          // Set the IP address in the span element
+          document.getElementById("sellerIpAddress").textContent = data.ip;
+        })
+        .catch(error => {
+          console.error("Error fetching IP address:", error);
+          document.getElementById("sellerIpAddress").textContent = "Unable to fetch IP";
+        });
+    }
+
+    // Call the function to fetch the IP address when needed
+    fetchSellerIpAddress();
+
+    // Initializing the app
+    init();
+    showLoginPage();
+    window.onload = init;
+  </script>
+
+</body>
+
+</html>
