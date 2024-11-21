@@ -561,18 +561,53 @@
     function initiateBuy(index) {
       const energyAmountToBuy = parseFloat(document.getElementById(`energyToBuy${index}`).value);
       const listing = energyListings[index];
-
+    
       if (energyAmountToBuy > listing.energyAmount || energyAmountToBuy <= 0) {
         alert('Invalid amount to buy.');
         return;
       }
-
-      // Proceed to payment gateway
-      document.getElementById('buy').style.display = 'none';
-      document.getElementById('payment').style.display = 'block';
-      // Pass energy amount to the simulateEnergyTransfer function
-      simulateEnergyTransfer(energyAmountToBuy);
+    
+      // Fetch buyer's public IP address
+      fetch('https://api.ipify.org?format=json')
+        .then(response => response.json())
+        .then(data => {
+          const buyerIp = data.ip; // Buyer's IP address
+          const sellerIp = currentUser.ipAddress; // Seller's IP from the listing
+          const price = energyAmountToBuy * listing.pricePerKWh;
+    
+          // Send request to Flask backend
+          fetch('/buy-energy', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              buyerIp: buyerIp,
+              sellerIp: sellerIp,
+              price: price,
+            }),
+          })
+            .then(response => response.json())
+            .then(data => {
+              if (data.status === 'Energy transfer started') {
+                alert('Energy transfer initiated. Processing...');
+                // Simulate energy transfer visually
+                simulateEnergyTransfer(energyAmountToBuy);
+              } else {
+                alert('Error starting energy transfer: ' + data.error);
+              }
+            })
+            .catch(error => {
+              console.error('Error:', error);
+              alert('Failed to initiate energy transfer. Please try again.');
+            });
+        })
+        .catch(error => {
+          console.error('Error fetching IP address:', error);
+          alert('Unable to fetch buyer IP address.');
+        });
     }
+    
 
     // Process Payment (Simulation)
     function processPayment(success) {
