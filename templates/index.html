@@ -328,8 +328,8 @@
         <input type="number" id="energyAmount" placeholder="Enter energy amount" required>
       </div>
       <div class="form-group">
-        <label for="pricePerKWh">Price per kW (in ₹):</label>
-        <input type="number" id="pricePerKWh" placeholder="Enter price per kW" required>
+        <label for="pricePerWh">Price per kW (in ₹):</label>
+        <input type="number" id="pricePerWh" placeholder="Enter price per kW" required>
       </div>
       <button class="button" onclick="listEnergy()">List Energy for Sale</button>
       <button class="back-button" onclick="goHome()">Back to Home</button>
@@ -385,25 +385,56 @@
 
     // Initializing the app and fetching stored data
     function init() {
-      users = JSON.parse(localStorage.getItem('users') || '[]');
-      energyListings = JSON.parse(localStorage.getItem('energyListings') || '[]');
-      currentUser = JSON.parse(localStorage.getItem('currentUser')) || null;
-
-      if (currentUser) {
+      // Check if the user is logged in
+      fetch('/api/current-user')
+      .then(response => response.json())
+      .then(data => {
+    if (data.success) {
+      currentUser = data.user;
+      showHomePage();
+    } else {
+      showLoginPage();
+    }
+  })
+  .catch(error => {
+    console.error('Error initializing app:', error);
+    showLoginPage();
+      if (currentUser) {//
         showAccountPage();
       } else {
         showLoginPage();
-      }
-    }
+      }//
+    });
+  }
 
-    function saveData() {
-      localStorage.setItem('users', JSON.stringify(users));
-      localStorage.setItem('energyListings', JSON.stringify(energyListings));
-    }
+  function saveData() {
+    fetch('/api/save-data', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ users, energyListings })
+    })
+    .then(response => response.json())
+    .then(data => console.log('Data saved to database'))
+    .catch(error => console.error('Error saving data:', error));
+  }
+  
 
-    function saveCurrentUser() {
-      localStorage.setItem('currentUser', JSON.stringify(currentUser));
-    }
+  function saveCurrentUser() {
+    fetch('/api/save-current-user', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ user: currentUser })
+    })
+    .then(response => response.json())
+    .then(data => console.log('Current user saved'))
+    .catch(error => console.error('Error saving user:', error));
+  }
+
+  
     function clearFormInputs(sectionId) {
       document.querySelector(`#${sectionId} input`).forEach(input => input.value = '');
     }
@@ -429,48 +460,53 @@
       const newUsername = document.getElementById('newUsername').value;
       const newEmail = document.getElementById('newEmail').value;
       const newPassword = document.getElementById('newPassword').value;
-      const newIpAddress = document.getElementById('newIpAddress').value;
-
-      const existingUser = users.find(user => user.username === newUsername || user.email === newEmail);
-      if (existingUser) {
-        alert('Username or email already exists!');
-        return;
-      }
-
-      const newUser = {
-        username: newUsername,
-        email: newEmail,
-        password: newPassword,
-        ipAddress: newIpAddress,
-        transactions: []
-      };
-      users.push(newUser);
-      saveData();
-      alert('Account created successfully!');
-      showLoginPage();
+      
+      fetch('/api/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username: newUsername, email: newEmail, password: newPassword })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          alert('Account created successfully!');
+          showLoginPage();
+        } else {
+          alert('Error: ' + data.error);
+        }
+      })
+      .catch(error => alert('Error signing up: ' + error));
     }
+    
 
     // Login function
     function login() {
       const username = document.getElementById('username').value;
       const email = document.getElementById('email').value;
       const password = document.getElementById('password').value;
-      const loginIpAddress = document.getElementById('loginIpAddress').value;
-
-      currentUser = users.find(user => user.username === username && user.email === email && user.password === password);
-      if (currentUser) {
-        if (currentUser.ipAddress && currentUser.ipAddress !== loginIpAddress) {
-          alert('IP address mismatch. Please use the registered IP or reset it.');
-          return;
+    
+      fetch('/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, email, password })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          currentUser = data.user;
+          saveCurrentUser();
+          showHomePage();
+        } else {
+          alert('Invalid credentials');
         }
-        currentUser.ipAddress = loginIpAddress;
-        saveCurrentUser();
-        saveData();
-        showHomePage(); // Go to home page after successful login
-      } else {
-        alert('Invalid credentials!');
-      }
+      })
+      .catch(error => alert('Error logging in: ' + error));
     }
+    
 
     // Show Home page after login/signup
     function showHomePage() {
@@ -486,11 +522,12 @@
       const newIp = prompt("Enter your new IP address:");
       if (newIp) {
         currentUser.ipAddress = newIp;
-        document.getElementById('accountIpAddress').textContent = newIp;
+        document.getElementById('accountIpAddress').textContent = newIp;  // Update the UI immediately
         saveData();
         alert("IP address reset successfully.");
       }
     }
+    
 
     // Logout function
     function logout() {
@@ -507,55 +544,73 @@
     // List energy for sale
     function listEnergy() {
       const energyAmount = parseFloat(document.getElementById('energyAmount').value);
-      const pricePerKWh = parseFloat(document.getElementById('pricePerKWh').value);
-
-      if (energyAmount && pricePerKWh) {
-        const listing = {
-          energyAmount,
-          pricePerKWh,
-          seller: currentUser.username,
-        };
-        energyListings.push(listing);
-        saveData();
-        alert('Energy listed successfully!');
-        showHomePage();
-      } else {
-        alert('Please enter valid energy and price values.');
+      const pricePerWh = parseFloat(document.getElementById('pricePerWh').value);
+    
+      if (energyAmount && pricePerWh) {
+        fetch('/api/list-energy', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ energyAmount, pricePerWh, seller: currentUser.username })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert('Energy listed successfully!');
+            showHomePage();
+          } else {
+            alert('Error listing energy');
+          }
+        })
+        .catch(error => alert('Error: ' + error));
       }
     }
+    
 
     // Show Buy Page
     function showBuyPage() {
       document.getElementById('buy').style.display = 'block';
       document.getElementById('home').style.display = 'none';
-      const energyListingsDiv = document.getElementById('energyListings');
-      energyListingsDiv.innerHTML = '';
-
-      energyListings.forEach((listing, index) => {
-        const listingDiv = document.createElement('div');
-        listingDiv.classList.add('listing');
-        listingDiv.innerHTML = `
-        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#FFA726" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <circle cx="12" cy="12" r="5"></circle>
-    <line x1="12" y1="1" x2="12" y2="3"></line>
-    <line x1="12" y1="21" x2="12" y2="23"></line>
-    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-    <line x1="1" y1="12" x2="3" y2="12"></line>
-    <line x1="21" y1="12" x2="23" y2="12"></line>
-    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-</svg>
-        <p>Seller: ${listing.seller}</p>
-        <p>Energy Available: ${listing.energyAmount} kW</p>
-        <p>Price per kW: ₹${listing.pricePerKWh}</p>
-        <label for="energyToBuy${index}">Energy to Buy (kW):</label>
-        <input type="number" id="energyToBuy${index}" placeholder="Enter amount" min="1" max="${listing.energyAmount}">
-        <button class="button" onclick="initiateBuy(${index})">Buy Energy</button>
-      `;
-        energyListingsDiv.appendChild(listingDiv);
-      });
+    
+      // Fetch current energy listings from the server
+      fetch('/api/energy-listings')
+        .then(response => response.json())
+        .then(data => {
+          const energyListingsDiv = document.getElementById('energyListings');
+          energyListingsDiv.innerHTML = '';
+    
+          data.listings.forEach((listing, index) => {
+            const listingDiv = document.createElement('div');
+            listingDiv.classList.add('listing');
+            listingDiv.innerHTML = `
+              <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#FFA726" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="5"></circle>
+                <line x1="12" y1="1" x2="12" y2="3"></line>
+                <line x1="12" y1="21" x2="12" y2="23"></line>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                <line x1="1" y1="12" x2="3" y2="12"></line>
+                <line x1="21" y1="12" x2="23" y2="12"></line>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+              </svg>
+              <p>Seller: ${listing.seller}</p>
+              <p>Energy Available: ${listing.energyAmount} kW</p>
+              <p>Price per kW: ₹${listing.pricePerKWh}</p>
+              <label for="energyToBuy${index}">Energy to Buy (kW):</label>
+              <input type="number" id="energyToBuy${index}" placeholder="Enter amount" min="1" max="${listing.energyAmount}">
+              <button class="button" onclick="initiateBuy(${index})">Buy Energy</button>
+            `;
+            energyListingsDiv.appendChild(listingDiv);
+          });
+        })
+        .catch(error => {
+          alert('Failed to load energy listings.');
+          console.error('Error:', error);
+        });
     }
+    
 
     // Initiate Buy Energy
     function initiateBuy(index) {
@@ -573,7 +628,7 @@
         .then(data => {
           const buyerIp = data.ip; // Buyer's IP address
           const sellerIp = currentUser.ipAddress; // Seller's IP from the listing
-          const price = energyAmountToBuy * listing.pricePerKWh;
+          const price = energyAmountToBuy * listing.pricePerWh;
     
           // Send request to Flask backend
           fetch('/buy-energy', {
@@ -641,57 +696,26 @@
     }
 
     // Complete Transaction (Update history and remove from listings)
-    function completeTransaction() {
-      // Get the energy amount from the input field
-      const energyAmountToBuy = parseFloat(document.getElementById('energyToBuy').value);
-      
-      // Find the relevant listing based on the energy amount
-      const listingIndex = energyListings.findIndex(listing => listing.energyAmount >= energyAmountToBuy);
-      
-      // If the listing exists
-      if (listingIndex !== -1) {
-        const listing = energyListings[listingIndex];
-        listing.energyAmount -= energyAmountToBuy;  // Decrease energy from listing
-        
-        const totalPrice = listing.pricePerKWh * energyAmountToBuy; // Calculate total price
-    
-        // Update current user's transaction history
-        currentUser.transactions.push({
-          type: 'Buy',
-          energyAmount: energyAmountToBuy,
-          price: totalPrice,
-          seller: listing.seller
-        });
-    
-        // Add the transaction to the global transfer history (for display)
-        const transaction = {
-          amount: energyAmountToBuy,
-          price: totalPrice,
-          seller: listing.seller,
-          date: new Date().toLocaleString() // Store the date and time of transaction
-        };
-        
-        // Add to transfer history array
-        transferHistory.push(transaction);
-    
-        // Remove the listing if no energy is left
-        if (listing.energyAmount <= 0) {
-          energyListings.splice(listingIndex, 1);
+    function completeTransaction(energyAmountToBuy) {
+      fetch('/api/complete-transaction', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ energyAmountToBuy, buyerUserId: currentUser.user_id })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          alert('Transaction Complete!');
+          showHomePage();
+        } else {
+          alert('Transaction failed: ' + data.error);
         }
-    
-        // Update the transfer history display
-        updateTransferHistory();
-    
-        // Optionally, save data to storage or server
-        saveData();
-    
-        // Notify user and show the home page
-        alert('Transaction Complete!');
-        showHomePage();
-      } else {
-        alert('Not enough energy available in this listing!');
-      }
+      })
+      .catch(error => alert('Error completing transaction: ' + error));
     }
+    
     
 
     // Function to update the transfer history display
@@ -760,6 +784,13 @@
 
     // Call the function to fetch the IP address when needed
     fetchSellerIpAddress();
+
+    //
+    window.onbeforeunload = () => {
+      saveData();
+      saveCurrentUser();
+    };
+    
 
     // Initializing the app
     init();

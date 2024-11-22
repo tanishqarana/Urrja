@@ -1,7 +1,7 @@
 import sqlite3
 
 # Connect to SQLite database (it will create the file if it doesn't exist)
-conn = sqlite3.connect('energy_market.db')
+conn = sqlite3.connect('new_energy_market.db')
 cursor = conn.cursor()
 
 # SQL Statements to create tables
@@ -57,12 +57,12 @@ CREATE TABLE IF NOT EXISTS ip_address_logs (
     FOREIGN KEY (user_id) REFERENCES users (user_id)
 );
 """
-
 # Execute each create table command
 cursor.execute(create_users_table)
 cursor.execute(create_energy_listings_table)
 cursor.execute(create_transactions_table)
 cursor.execute(create_ip_address_logs_table)
+
 
 # Commit changes and close connection
 conn.commit()

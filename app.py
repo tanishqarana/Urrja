@@ -1,11 +1,12 @@
 from flask import Flask, request, jsonify, render_template
+from werkzeug.security import generate_password_hash, check_password_hash
 import sqlite3
 import requests
 
 app = Flask(__name__)
 
 # Database setup
-DATABASE = 'energy_market.db'  # SQLite database file
+DATABASE = 'new_energy_market.db'  # SQLite database file
 
 # Function to get a database connection
 def get_db_connection():
@@ -18,17 +19,12 @@ def get_db_connection():
 def init_db():
     conn = get_db_connection()
     conn.execute('''
-        CREATE TABLE IF NOT EXISTS transactions (
-            transaction_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            buyer_user_id INTEGER,
-            seller_user_id INTEGER,
-            listing_id INTEGER,
-            transaction_amount REAL NOT NULL,
-            transaction_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            status TEXT DEFAULT 'Pending',
-            FOREIGN KEY (buyer_user_id) REFERENCES users (user_id),
-            FOREIGN KEY (seller_user_id) REFERENCES users (user_id),
-            FOREIGN KEY (listing_id) REFERENCES energy_listings (listing_id)
+        CREATE TABLE IF NOT EXISTS users (
+            user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL,
+            email TEXT NOT NULL,
+            password TEXT NOT NULL,
+            ip_address TEXT
         );
     ''')
     conn.commit()
@@ -41,79 +37,148 @@ init_db()
 def home():
     return render_template('index.html')
 
-# Endpoint to simulate energy purchase
-@app.route('/buy-energy', methods=['POST'])
-def buy_energy():
-    data = request.get_json()
+@app.route('/api/save-data', methods=['POST'])
+def save_data():
+    data = request.json
+    users = data.get('users')
+    energy_listings = data.get('energyListings')
+    
+    # Save users and listings to database
+    save_users_to_db(users)
+    save_energy_listings_to_db(energy_listings)
+    
+    return jsonify({'status': 'success'})
 
-    if not data:
-        return jsonify({"error": "Missing JSON body"}), 400
+@app.route('/api/login', methods=['POST'])
+def login():
+    data = request.json
+    username = data.get('username')
+    email = data.get('email')
+    password = data.get('password')
 
-    buyer_ip = data.get('buyerIp')
-    seller_ip = data.get('sellerIp')
-    price_per_unit = data.get('price')
+    user = check_user_credentials(username, email, password)
+    if user:
+        return jsonify({'success': True, 'user': user})
+    return jsonify({'success': False, 'error': 'Invalid credentials'})
 
-    if not (buyer_ip and seller_ip and price_per_unit):
-        return jsonify({"error": "Invalid or missing data"}), 400
+@app.route('/api/list-energy', methods=['POST'])
+def list_energy():
+    data = request.json
+    energy_amount = data.get('energyAmount')
+    price_per_kwh = data.get('pricePerKWh')
+    seller_user_id = data.get('sellerUserId')
 
-    # Get user IDs for buyer and seller (You may need to look up user info from the users table)
-    buyer_user_id = get_user_id_from_ip(buyer_ip)
-    seller_user_id = get_user_id_from_ip(seller_ip)
+    # Insert energy listing into DB
+    create_energy_listing_in_db(seller_user_id, energy_amount, price_per_kwh)
+    return jsonify({'success': True})
 
-    if not (buyer_user_id and seller_user_id):
-        return jsonify({"error": "User not found"}), 404
+@app.route('/api/complete-transaction', methods=['POST'])
+def complete_transaction():
+    data = request.json
+    energy_amount_to_buy = data.get('energyAmountToBuy')
+    buyer_user_id = data.get('buyerUserId')
 
-    # Insert transaction data into the database
-    try:
-        conn = get_db_connection()
-        conn.execute('''
-            INSERT INTO transactions (buyer_user_id, seller_user_id, transaction_amount) 
-            VALUES (?, ?, ?)
-        ''', (buyer_user_id, seller_user_id, price_per_unit))
-        conn.commit()
-        conn.close()
+    # Process the transaction in DB
+    process_transaction_in_db(buyer_user_id, energy_amount_to_buy)
+    return jsonify({'success': True})
 
-        app.logger.info(f"Stored transaction: Buyer User ID: {buyer_user_id}, Seller User ID: {seller_user_id}, Price: {price_per_unit}")
-    except Exception as e:
-        app.logger.error(f"Error saving transaction to database: {e}")
-        return jsonify({"error": "Failed to save transaction to database"}), 500
+@app.route('/api/signup', methods=['POST'])
+def signup():
+    data = request.json
+    username = data.get('username')
+    email = data.get('email')
+    password = data.get('password')
 
-    # Send data to ESP32 to start the transfer
-    esp_url = f"http://{seller_ip}/start"
-    esp_data = {
-        "sendIp": seller_ip,
-        "receiveIp": buyer_ip,
-        "price": price_per_unit
-    }
+    if check_if_user_exists(username, email):
+        return jsonify({'success': False, 'error': 'Username or email already exists'})
 
-    try:
-        response = requests.post(esp_url, json=esp_data, timeout=5)
+    # Create new user in DB
+    create_user_in_db(username, email, password)
+    return jsonify({'success': True})
 
-        if response.status_code == 200:
-            app.logger.info("Energy transfer initiated successfully.")
-            return jsonify({"status": "Energy transfer started"}), 200
-        else:
-            app.logger.warning(f"ESP returned status {response.status_code}: {response.text}")
-            return jsonify({"error": f"ESP returned status {response.status_code}"}), 500
+def create_user_in_db(username, email, password):
+    hashed_password = generate_password_hash(password)
+    conn = get_db_connection()
+    conn.execute('''
+        INSERT INTO users (username, email, password) 
+        VALUES (?, ?, ?)
+    ''', (username, email, hashed_password))
+    conn.commit()
+    conn.close()
 
-    except requests.exceptions.RequestException as e:
-        app.logger.error(f"ESP communication error: {e}")
-        return jsonify({"error": "Failed to initiate transfer on ESP"}), 500
-
-
-def get_user_id_from_ip(ip_address):
-    """
-    Function to look up user ID from IP address in the users table.
-    You can implement this based on your specific user registration logic.
-    """
+def check_user_credentials(username, email, password):
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('SELECT user_id FROM users WHERE ip_address = ?', (ip_address,))
+    cursor.execute('SELECT * FROM users WHERE username = ? AND email = ?', (username, email))
     user = cursor.fetchone()
     conn.close()
-    if user:
-        return user['user_id']
+    if user and check_password_hash(user['password'], password):
+        return {'user_id': user['user_id'], 'username': user['username'], 'email': user['email']}
     return None
+
+def check_if_user_exists(username, email):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM users WHERE username = ? OR email = ?', (username, email))
+    user = cursor.fetchone()
+    conn.close()
+    return user is not None
+
+def save_users_to_db(users):
+    conn = get_db_connection()
+    for user in users:
+        hashed_password = generate_password_hash(user['password'])
+        conn.execute('''
+            INSERT INTO users (username, email, password) 
+            VALUES (?, ?, ?)
+        ''', (user['username'], user['email'], hashed_password))
+    conn.commit()
+    conn.close()
+
+def save_energy_listings_to_db(energy_listings):
+    conn = get_db_connection()
+    for listing in energy_listings:
+        conn.execute('''
+            INSERT INTO energy_listings (seller_user_id, energy_amount, price_per_kwh) 
+            VALUES (?, ?, ?)
+        ''', (listing['seller_user_id'], listing['energy_amount'], listing['price_per_kwh']))
+    conn.commit()
+    conn.close()
+
+def create_energy_listing_in_db(seller_user_id, energy_amount, price_per_kwh):
+    conn = get_db_connection()
+    conn.execute('''
+        INSERT INTO energy_listings (seller_user_id, energy_amount, price_per_kwh) 
+        VALUES (?, ?, ?)
+    ''', (seller_user_id, energy_amount, price_per_kwh))
+    conn.commit()
+    conn.close()
+
+def process_transaction_in_db(buyer_user_id, energy_amount_to_buy):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM energy_listings WHERE energy_amount >= ?', (energy_amount_to_buy,))
+    listing = cursor.fetchone()
+
+    if listing:
+        conn.execute('''
+            INSERT INTO transactions (buyer_user_id, seller_user_id, listing_id, transaction_amount) 
+            VALUES (?, ?, ?, ?)
+        ''', (buyer_user_id, listing['seller_user_id'], listing['listing_id'], energy_amount_to_buy))
+
+        # Update the energy listing
+        new_energy_amount = listing['energy_amount'] - energy_amount_to_buy
+        conn.execute('''
+            UPDATE energy_listings 
+            SET energy_amount = ? 
+            WHERE listing_id = ?
+        ''', (new_energy_amount, listing['listing_id']))
+
+        conn.commit()
+    else:
+        # Handle case where no matching listing is found
+        pass
+    conn.close()
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=3000)
